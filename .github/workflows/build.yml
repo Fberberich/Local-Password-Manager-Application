@@ -29,7 +29,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libnotify-dev libnss3-dev libxss1 libxtst6 libx11-xcb1 libdbus-glib-1-2 libxt6 libpci3 libasound2
+        sudo apt-get install libgtk2.0-0t64 libgtk-3-0t64 libgbm-dev libnotify-dev libnss3 libxss1 libasound2t64 libxtst6 xauth xvfb
 
     - name: Build for Windows
       if: matrix.os == 'windows-latest'
