@@ -27,6 +27,11 @@
     },
     "mac": {
       "target": "dmg"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Utility",
+      "icon": "build/icon.png"
     }
   }
 }
