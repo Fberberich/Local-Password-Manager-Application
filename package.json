@@ -10,7 +10,10 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
-  "author": "Fred Berberich",
+  "author": {
+    "name": "Fred Berberich",
+    "email": "fred.berberich@example.com"
+  },
   "license": "MIT",
   "devDependencies": {
     "electron": "23.1.3",
