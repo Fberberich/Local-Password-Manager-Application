@@ -1,4 +1,5 @@
 const { ipcRenderer } = require('electron');
+const CryptoJS = require('crypto-js');
 
 // Show/hide tabs
 function showTab(tabName) {
@@ -6,13 +7,19 @@ function showTab(tabName) {
     document.querySelectorAll('.tab-button').forEach(button => {
         button.classList.remove('active');
     });
-    document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+    const activeButton = document.querySelector(`[href="${tabName}.html"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
 
     // Update tab content
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });
-    document.getElementById(`${tabName}-tab`).classList.add('active');
+    const activeTab = document.getElementById(`${tabName}-tab`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
 
     // Load passwords when switching to view tab
     if (tabName === 'view') {
@@ -76,37 +83,25 @@ function copyPassword(password) {
     });
 }
 
-// Function to toggle password visibility in the list
-function togglePasswordVisibility(serviceId, event) {
-    const dots = document.getElementById(`pwd-${serviceId}`);
-    const text = document.getElementById(`text-${serviceId}`);
-    const button = event.target.closest('button');
-    
-    if (dots.style.display !== 'none') {
-        dots.style.display = 'none';
-        text.style.display = 'inline';
-        button.innerHTML = '<span class="button-icon">👁️</span>Hide';
-        
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-            if (text.style.display !== 'none') {  // Only hide if still visible
-                dots.style.display = 'inline';
-                text.style.display = 'none';
-                button.innerHTML = '<span class="button-icon">👁️</span>Show';
-            }
-        }, 3000);
-    } else {
-        // If password is visible, hide it immediately
-        dots.style.display = 'inline';
-        text.style.display = 'none';
-        button.innerHTML = '<span class="button-icon">👁️</span>Show';
-    }
-}
-
 // Listen for password updates
 ipcRenderer.on('passwords-updated', (event, passwords) => {
     const passwordList = document.getElementById('password-list');
+    if (!passwordList) return; // Exit if we're not on the view page
+    
     passwordList.innerHTML = '';
+
+    if (!passwords || passwords.length === 0) {
+        const emptyState = document.getElementById('empty-state');
+        if (emptyState) {
+            emptyState.style.display = 'block';
+        }
+        return;
+    }
+
+    const emptyState = document.getElementById('empty-state');
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
 
     passwords.sort((a, b) => a.service.localeCompare(b.service));
 
@@ -121,20 +116,35 @@ ipcRenderer.on('passwords-updated', (event, passwords) => {
         const showButton = document.createElement('button');
         showButton.className = 'btn-copy';
         showButton.innerHTML = '<span class="button-icon">👁️</span>Show';
-        showButton.addEventListener('click', (e) => togglePasswordVisibility(safeServiceId, e));
+        showButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            togglePasswordVisibility(safeServiceId, e, entry.password);
+        });
 
         const copyButton = document.createElement('button');
         copyButton.className = 'btn-copy';
         copyButton.innerHTML = '<span class="button-icon">📋</span>Copy';
-        copyButton.addEventListener('click', () => copyPassword(entry.password));
+        copyButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            copyPassword(entry.password);
+        });
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'btn-delete';
+        deleteButton.innerHTML = '<span class="button-icon">🗑️</span>Delete';
+        deleteButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (confirm('Are you sure you want to delete this password?')) {
+                ipcRenderer.send('delete-password', entry.service);
+            }
+        });
         
         passwordItem.innerHTML = `
             <div class="password-info">
                 <h3>${entry.service}</h3>
                 <p>${entry.username}</p>
                 <div class="password-field">
-                    <span class="password-dots" id="pwd-${safeServiceId}">••••••••</span>
-                    <span class="password-text" id="text-${safeServiceId}" style="display: none;">${entry.password}</span>
+                    <span class="password-display" id="pwd-${safeServiceId}">••••••••</span>
                 </div>
             </div>
             <div class="password-actions">
@@ -145,12 +155,79 @@ ipcRenderer.on('passwords-updated', (event, passwords) => {
         const actionsDiv = passwordItem.querySelector('.password-actions');
         actionsDiv.appendChild(showButton);
         actionsDiv.appendChild(copyButton);
+        actionsDiv.appendChild(deleteButton);
         
         passwordList.appendChild(passwordItem);
     });
 });
 
-// Request initial passwords if we're on the view tab
-if (document.getElementById('view-tab').classList.contains('active')) {
-    loadPasswords();
-} 
+// Function to toggle password visibility in the list
+function togglePasswordVisibility(serviceId, event, password) {
+    const displayElement = document.getElementById(`pwd-${serviceId}`);
+    const button = event.currentTarget;
+    
+    if (!displayElement || !button) return;
+    
+    // Clear any existing timeouts for this password
+    if (displayElement.timeoutId) {
+        clearTimeout(displayElement.timeoutId);
+        displayElement.timeoutId = null;
+    }
+    
+    // Toggle visibility
+    if (displayElement.textContent === '••••••••') {
+        // Show password
+        displayElement.textContent = password;
+        button.innerHTML = '<span class="button-icon">👁️</span>Hide';
+        
+        // Set timeout to hide password after 3 seconds
+        displayElement.timeoutId = setTimeout(() => {
+            if (displayElement.textContent === password) {
+                displayElement.textContent = '••••••••';
+                button.innerHTML = '<span class="button-icon">👁️</span>Show';
+                displayElement.timeoutId = null;
+            }
+        }, 3000);
+    } else {
+        // Hide password immediately
+        displayElement.textContent = '••••••••';
+        button.innerHTML = '<span class="button-icon">👁️</span>Show';
+        
+        // Clear any existing timeout
+        if (displayElement.timeoutId) {
+            clearTimeout(displayElement.timeoutId);
+            displayElement.timeoutId = null;
+        }
+    }
+}
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', () => {
+    // Add event listener for the toggle button in the form
+    const toggleButton = document.querySelector('.toggle-password');
+    if (toggleButton) {
+        toggleButton.addEventListener('click', togglePassword);
+    }
+
+    // Add event listeners for tab navigation
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const href = button.getAttribute('href');
+            if (href) {
+                window.location.href = href;
+            }
+        });
+    });
+
+    // Add search input event listener
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', searchPasswords);
+    }
+
+    // Load passwords if we're on the view tab
+    if (document.getElementById('view-tab')?.classList.contains('active')) {
+        loadPasswords();
+    }
+}); 
