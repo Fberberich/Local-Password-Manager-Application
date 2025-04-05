@@ -118,7 +118,7 @@ ipcRenderer.on('passwords-updated', (event, passwords) => {
         showButton.innerHTML = '<span class="button-icon">👁️</span>Show';
         showButton.addEventListener('click', (e) => {
             e.preventDefault();
-            togglePasswordVisibility(safeServiceId, e, entry.password);
+            passwordView(safeServiceId, e, entry.password);
         });
 
         const copyButton = document.createElement('button');
@@ -162,42 +162,18 @@ ipcRenderer.on('passwords-updated', (event, passwords) => {
 });
 
 // Function to toggle password visibility in the list
-function togglePasswordVisibility(serviceId, event, password) {
+function passwordView(serviceId, event, password) {
     const displayElement = document.getElementById(`pwd-${serviceId}`);
     const button = event.currentTarget;
     
-    if (!displayElement || !button) return;
-    
-    // Clear any existing timeouts for this password
-    if (displayElement.timeoutId) {
-        clearTimeout(displayElement.timeoutId);
-        displayElement.timeoutId = null;
-    }
-    
-    // Toggle visibility
     if (displayElement.textContent === '••••••••') {
         // Show password
         displayElement.textContent = password;
         button.innerHTML = '<span class="button-icon">👁️</span>Hide';
-        
-        // Set timeout to hide password after 3 seconds
-        displayElement.timeoutId = setTimeout(() => {
-            if (displayElement.textContent === password) {
-                displayElement.textContent = '••••••••';
-                button.innerHTML = '<span class="button-icon">👁️</span>Show';
-                displayElement.timeoutId = null;
-            }
-        }, 3000);
     } else {
-        // Hide password immediately
+        // Hide password
         displayElement.textContent = '••••••••';
         button.innerHTML = '<span class="button-icon">👁️</span>Show';
-        
-        // Clear any existing timeout
-        if (displayElement.timeoutId) {
-            clearTimeout(displayElement.timeoutId);
-            displayElement.timeoutId = null;
-        }
     }
 }
 

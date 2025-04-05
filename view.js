@@ -27,7 +27,7 @@ function displayPasswords(passwords) {
         const showButton = document.createElement('button');
         showButton.className = 'btn-copy';
         showButton.innerHTML = '<span class="button-icon">👁️</span>Show';
-        showButton.addEventListener('click', (e) => togglePasswordVisibility(safeServiceId, e));
+        showButton.addEventListener('click', (e) => passwordView(safeServiceId, e, entry.password));
 
         const copyButton = document.createElement('button');
         copyButton.className = 'btn-copy';
@@ -44,8 +44,7 @@ function displayPasswords(passwords) {
                 <h3>${entry.service}</h3>
                 <p>${entry.username}</p>
                 <div class="password-field">
-                    <span class="password-dots" id="pwd-${safeServiceId}">••••••••</span>
-                    <span class="password-text" id="text-${safeServiceId}" style="display: none;">${entry.password}</span>
+                    <span class="password-display" id="pwd-${safeServiceId}" data-password="${entry.password}">••••••••</span>
                 </div>
             </div>
             <div class="password-actions">
@@ -101,29 +100,18 @@ function copyPassword(password, button) {
     });
 }
 
-// Function to toggle password visibility
-function togglePasswordVisibility(serviceId, event) {
-    const dots = document.getElementById(`pwd-${serviceId}`);
-    const text = document.getElementById(`text-${serviceId}`);
+// Function for password visibility - simplified W3Schools style
+function passwordView(serviceId, event, password) {
+    const displayElement = document.getElementById(`pwd-${serviceId}`);
     const button = event.target.closest('button');
     
-    if (dots.style.display !== 'none') {
-        dots.style.display = 'none';
-        text.style.display = 'inline';
+    if (displayElement.textContent === '••••••••') {
+        // Show password
+        displayElement.textContent = displayElement.dataset.password;
         button.innerHTML = '<span class="button-icon">👁️</span>Hide';
-        
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-            if (text.style.display !== 'none') {  // Only hide if still visible
-                dots.style.display = 'inline';
-                text.style.display = 'none';
-                button.innerHTML = '<span class="button-icon">👁️</span>Show';
-            }
-        }, 3000);
     } else {
-        // If password is visible, hide it immediately
-        dots.style.display = 'inline';
-        text.style.display = 'none';
+        // Hide password
+        displayElement.textContent = '••••••••';
         button.innerHTML = '<span class="button-icon">👁️</span>Show';
     }
 }
@@ -148,5 +136,14 @@ ipcRenderer.on('passwords-updated', (event, passwords) => {
     displayPasswords(passwords);
 });
 
-// Request initial passwords
-ipcRenderer.send('get-passwords'); 
+// Initialize the page
+document.addEventListener('DOMContentLoaded', () => {
+    // Add search input event listener
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', searchPasswords);
+    }
+
+    // Request initial passwords
+    ipcRenderer.send('get-passwords');
+}); 
