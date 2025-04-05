@@ -7,7 +7,9 @@ I made an app using the need to remember all of her passwords and my skills and 
 
 It runs locally on your computer, so you won't need to rely on additional servers or companies!
 
-Since this isn't a full production, there are some small bugs in the code, but it runs smoothly, and more importantly, it WORKS!!!
+Since this isn't a full production, there are some small bugs in the code, but it runs smoothly, and more importantly, it is SECURE!!!
+
+**All Passwords inputted into the Password Manager is Encrypted using a secure encryption and is saved in a secure folder on the user's device**
 
 I included the files for the code in this repository, but I also have the packaged app here for Windows, Mac, & Linux (Ubuntu), so feel free to try it out!
 
